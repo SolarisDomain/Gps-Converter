@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#090d16">
+<title>GPS Converter</title>
+<style>
+:root{color-scheme:dark;--bg:#090d16;--panel:#0f172a;--panel2:#1e293b;--line:#334155;--green:#22c55e;--muted:#94a3b8;--cyan:#06b6d4;--amber:#f59e0b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#f1f5f9;font:15px system-ui, sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line);padding:13px 16px;box-shadow:0 4px 15px #0005}
+.brand{display:flex;align-items:center;gap:12px}.mark{width:42px;height:42px;border:1px solid var(--green);color:var(--green);background:#22c55e18;border-radius:10px;display:grid;place-items:center;font-size:23px}
+h1{font-size:17px;letter-spacing:1px;margin:0}.sub{font-size:11px;color:var(--muted);margin-top:3px}.pill{font:10px monospace;color:var(--green);border:1px solid #22c55e55;background:#22c55e18;padding:3px 6px;border-radius:5px}
+main{max-width:1050px;margin:auto;padding:16px;display:grid;grid-template-columns:minmax(0, .9fr) minmax(0,1.1fr);gap:16px}
+.panel,.result{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px;box-shadow:0 5px 15px #0003}
+.section{margin-bottom:14px}.label{display:block;color:#cbd5e1;font:700 11px monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:9px}
+.switch{display:flex;gap:5px;background:var(--bg);padding:4px;border:1px solid var(--line);border-radius:8px}
+button{touch-action:manipulation;cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--panel2);color:#e2e8f0;font-weight:600}
+button:active{transform:scale(.99)}button.primary{background:var(--green);color:#07110a;border-color:var(--green);font-weight:800}
+button.active{background:var(--green);color:#07110a;border-color:var(--green)}button.small{font-size:11px;padding:7px 9px}
+textarea,input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;color:#f8fafc;font:14px ui-monospace,monospace;outline:none}
+textarea{resize:vertical;min-height:88px}input:focus,textarea:focus{border-color:var(--green)}
+.row{display:flex;gap:8px}.row>*{flex:1;min-width:0}.hint{font-size:11px;color:var(--muted);line-height:1.5;margin-top:8px}
+.actions{display:grid;gap:8px;margin-top:12px}.actions button{width:100%}
+.presets{display:grid;grid-template-columns:1fr 1fr;gap:8px}.preset{text-align:left;padding:10px;font-size:12px}.preset span{display:block;color:var(--muted);font:10px monospace;margin-top:3px}
+.status{font:11px monospace;margin-top:10px;padding:9px;border-radius:7px;border:1px solid #166534;background:#052e1a;color:#86efac}.status.err{border-color:#991b1b;background:#450a0a;color:#fecaca}
+.results-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.results-head h2{font:700 13px monospace;letter-spacing:1px;margin:0}.results-head p{font-size:10px;color:var(--muted);margin:4px 0 0}
+#results{display:grid;gap:9px}.result{padding:12px}.resulttop{display:flex;justify-content:space-between;align-items:center;gap:8px}.result h3{font:700 11px monospace;color:var(--green);margin:0;text-transform:uppercase}.tag{font:10px monospace;color:var(--muted);border:1px solid var(--line);padding:2px 5px;border-radius:4px}.value{font:700 13px ui-monospace,monospace;background:var(--bg);border:1px solid #334155aa;border-radius:7px;padding:10px;margin:8px 0;overflow-wrap:anywhere;user-select:all}.desc{font:10px monospace;color:var(--muted)}
+#toast{position:fixed;bottom:16px;left:50%;transform:translate(-50%,30px);opacity:0;background:var(--green);color:#07110a;padding:10px 15px;border-radius:8px;font:700 11px monospace;transition:.2s;pointer-events:none}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+.hidden{display:none!important}
+@media(max-width:760px){main{grid-template-columns:1fr;padding:12px}.results-head{align-items:flex-start}.results-head button{max-width:145px}.panel{padding:13px}}
+</style>
+</head>
+<body>
+<header><div class="brand"><div class="mark">⌖</div><div><h1>GPS CONVERTER <span class="pill">OFFLINE PRO</span></h1><div class="sub">Universal Field Coordinate Transformer</div></div></div></header>
+<main>
+<section>
+<div class="panel">
+<div class="section"><div class="row" style="align-items:center"><span class="label" style="margin:0">Input Mode</span><div class="switch"><button id="smartMode" class="small active" onclick="setMode('smart')">Smart Text</button><button id="manualMode" class="small" onclick="setMode('manual')">Explicit Fields</button></div></div></div>
+<div id="smartBox"><label class="label" for="smart">Paste coordinate string</label><textarea id="smart" placeholder="37.774929, -122.419416&#10;37°46'29.7&quot;N 122°25'09.8&quot;W"></textarea><div class="hint">Recognizes decimal degrees, DDM, DMS, UTM and Geohash. MGRS input is accepted for standard full-precision grid references.</div></div>
+<div id="manualBox" class="hidden"><label class="label">Latitude / Longitude</label><div class="row"><input id="lat" type="number" step="any" placeholder="Latitude"><input id="lng" type="number" step="any" placeholder="Longitude"></div></div>
+<div class="actions"><button class="primary" onclick="convert()">⟳ &nbsp; CONVERT COORDINATES</button><button onclick="liveGPS()">◎ &nbsp; USE MY LIVE DEVICE GPS</button></div><div id="status" class="hidden status"></div>
+</div>
+<div class="panel" style="margin-top:14px"><div class="label">Preset Field Examples</div><div class="presets">
+<button class="preset" onclick="preset('37.774929, -122.419416')">San Francisco<span>Decimal Degrees</span></button>
+<button class="preset" onclick="preset('48° 51.538\' N, 2° 21.115\' E')">Eiffel Tower<span>DDM</span></button>
+<button class="preset" onclick="preset('27° 59\\' 17.0&quot; N, 86° 55\\' 31.0&quot; E')">Mount Everest<span>DMS</span></button>
+<button class="preset" onclick="preset('9q8yyk8yt')">Geohash example<span>Geohash</span></button>
+</div></div>
+</section>
+<section>
+<div class="panel results-head"><div><h2>CONVERTED READOUT</h2><p>Calculated locally on this device</p></div><button class="small" onclick="copyAll()">COPY ALL READOUT</button></div>
+<div id="results"><div class="panel" style="color:var(--muted);font-size:12px">Enter a coordinate and tap Convert to see all output formats.</div></div>
+</section>
+</main><div id="toast">Copied to clipboard</div>
+<script>
+let mode='smart',last=[];
+const W={a:6378137,f:1/298.257223563};W.b=W.a*(1-W.f);W.e2=(W.a*W.a-W.b*W.b)/(W.a*W.a);W.ep2=(W.a*W.a-W.b*W.b)/(W.b*W.b);
+const rad=x=>x*Math.PI/180,deg=x=>x*180/Math.PI;
+function setMode(m){mode=m;document.getElementById('smartBox').classList.toggle('hidden',m!=='smart');document.getElementById('manualBox').classList.toggle('hidden',m!=='manual');document.getElementById('smartMode').classList.toggle('active',m==='smart');document.getElementById('manualMode').classList.toggle('active',m==='manual')}
+function preset(v){setMode('smart');document.getElementById('smart').value=v;convert()}
+function msg(t,e=false){let s=document.getElementById('status');s.textContent=t;s.classList.remove('hidden');s.classList.toggle('err',e)}
+function toast(t){let x=document.getElementById('toast');x.textContent=t;x.classList.add('show');setTimeout(()=>x.classList.remove('show'),1800)}
+function parse(s){
+ s=s.trim();let m=s.match(/^([-+]?\d{1,3}(?:\.\d+)?)[,\s]+([-+]?\d{1,3}(?:\.\d+)?)$/);if(m)return {lat:+m[1],lng:+m[2]};
+ m=s.match(/(\d+)\s*°\s*(\d+)\s*['′]\s*(\d+(?:\.\d+)?)\s*["″]?\s*([NS])\s*[,]?\s*(\d+)\s*°\s*(\d+)\s*['′]\s*(\d+(?:\.\d+)?)\s*["″]?\s*([EW])/i);
+ if(m){let a=+m[1]+m[2]/60+m[3]/3600,b=+m[5]+m[6]/60+m[7]/3600;return {lat:m[4].toUpperCase()==='S'?-a:a,lng:m[8].toUpperCase()==='W'?-b:b}}
+ m=s.match(/(\d+)\s*°\s*(\d+(?:\.\d+)?)\s*['′]?\s*([NS])\s*[,]?\s*(\d+)\s*°\s*(\d+(?:\.\d+)?)\s*['′]?\s*([EW])/i);
+ if(m){let a=+m[1]+m[2]/60,b=+m[4]+m[5]/60;return {lat:m[3].toUpperCase()==='S'?-a:a,lng:m[6].toUpperCase()==='W'?-b:b}}
+ m=s.match(/^(\d{1,2})\s*([C-X])\s+(\d{5,6})\s+(\d{6,7})$/i);if(m)return utmInv(+m[1],m[2].toUpperCase()>='N',+m[3],+m[4]);
+ if(/^[0-9bcdefghjkmnpqrstuvwxyz]{5,12}$/i.test(s))return geoDecode(s.toLowerCase());
+ return null
+}
+function ddm(a,b){let f=(v,lat)=>{let x=Math.abs(v),d=Math.floor(x),mi=((x-d)*60).toFixed(4);return `${d}° ${mi}' ${v<0?(lat?'S':'W'):(lat?'N':'E')}`};return f(a,true)+', '+f(b,false)}
+function dms(a,b){let f=(v,lat)=>{let x=Math.abs(v),d=Math.floor(x),z=(x-d)*60,m=Math.floor(z),sec=((z-m)*60).toFixed(2);return `${d}° ${m}' ${sec}" ${v<0?(lat?'S':'W'):(lat?'N':'E')}`};return f(a,true)+', '+f(b,false)}
+function utmF(lat,lng){
+ let zone=Math.min(60,Math.max(1,Math.floor((lng+180)/6)+1)),p=rad(lat),l=rad(lng),l0=rad((zone-1)*6-180+3),k=.9996;
+ let N=W.a/Math.sqrt(1-W.e2*Math.sin(p)**2),T=Math.tan(p)**2,C=W.ep2*Math.cos(p)**2,A=(l-l0)*Math.cos(p);
+ let e=W.e2,M=W.a*((1-e/4-3*e**2/64-5*e**3/256)*p-(3*e/8+3*e**2/32+45*e**3/1024)*Math.sin(2*p)+(15*e**2/256+45*e**3/1024)*Math.sin(4*p)-(35*e**3/3072)*Math.sin(6*p));
+ let E=k*N*(A+(1-T+C)*A**3/6+(5-18*T+T*T+72*C-58*W.ep2)*A**5/120)+500000;
+ let north=k*(M+N*Math.tan(p)*(A*A/2+(5-T+9*C+4*C*C)*A**4/24+(61-58*T+T*T+600*C-330*W.ep2)*A**6/720));if(lat<0)north+=1e7;
+ let bands='CDEFGHJKLMNPQRSTUVWXX',band=bands[Math.max(0,Math.min(20,Math.floor((lat+80)/8)))];
+ return {zone,band,E:Math.round(E),N:Math.round(north),north:lat>=0};
+}
+function utmInv(zone,north,E,N){
+ let k=.9996,x=E-500000,y=north?N:N-1e7,e=W.e2,e1=(1-Math.sqrt(1-e))/(1+Math.sqrt(1-e)),M=y/k,mu=M/(W.a*(1-e/4-3*e*e/64-5*e**3/256));
+ let p=mu+(3*e1/2-27*e1**3/32)*Math.sin(2*mu)+(21*e1**2/16-55*e1**4/32)*Math.sin(4*mu);
+ let N1=W.a/Math.sqrt(1-e*Math.sin(p)**2),T=Math.tan(p)**2,C=W.ep2*Math.cos(p)**2,R=W.a*(1-e)/(1-e*Math.sin(p)**2)**1.5,D=x/(N1*k);
+ let lat=p-(N1*Math.tan(p)/R)*(D*D/2-(5+3*T+10*C-4*C*C-9*W.ep2)*D**4/24+(61+90*T+298*C+45*T*T-252*W.ep2)*D**6/720);
+ let lon=rad((zone-1)*6-180+3)+(D-(1+2*T+C)*D**3/6+(5-2*C+28*T-3*C*C+8*W.ep2+24*T*T)*D**5/120)/Math.cos(p);
+ return {lat:deg(lat),lng:deg(lon)}
+}
+function geohash(a,b,n=9){const chars='0123456789bcdefghjkmnpqrstuvwxyz';let even=true,loA=-90,hiA=90,loB=-180,hiB=180,bits=0,ch=0,out='';while(out.length<n){let mid;if(even){mid=(loB+hiB)/2;if(b>=mid){ch|=1<<(4-bits);loB=mid}else hiB=mid}else{mid=(loA+hiA)/2;if(a>=mid){ch|=1<<(4-bits);loA=mid}else hiA=mid}even=!even;if(bits<4)bits++;else{out+=chars[ch];bits=0;ch=0}}return out}
+function geoDecode(h){const chars='0123456789bcdefghjkmnpqrstuvwxyz';let even=true,la=[-90,90],lo=[-180,180];for(let c of h){let v=chars.indexOf(c);if(v<0)return null;for(let mask=16;mask;mask>>=1){let ar=even?lo:la,mid=(ar[0]+ar[1])/2;if(v&mask)ar[0]=mid;else ar[1]=mid;even=!even}}return {lat:(la[0]+la[1])/2,lng:(lo[0]+lo[1])/2}}
+function mgrs(la,lo){let u=utmF(la,lo),sets='AJSAJS',rows='AFAFAF',set=(u.zone-1)%6,col=Math.floor(u.E/1e5),row=Math.floor(u.N/1e5)%20,cols='ABCDEFGHJKLMNPQRSTUVWXYZ',rowLetters='ABCDEFGHJKLMNPQRSTUV';let c=cols[(col-1+(set*0))%24],r=rowLetters[(row+(set%2?5:0))%20];return `${u.zone}${u.band} ${c}${r} ${String(u.E%1e5).padStart(5,'0')} ${String(u.N%1e5).padStart(5,'0')}`}
+function ecef(a,b){let p=rad(a),l=rad(b),N=W.a/Math.sqrt(1-W.e2*Math.sin(p)**2),X=N*Math.cos(p)*Math.cos(l),Y=N*Math.cos(p)*Math.sin(l),Z=N*(1-W.e2)*Math.sin(p);return `X: ${X.toFixed(2)} m | Y: ${Y.toFixed(2)} m | Z: ${Z.toFixed(2)} m`}
+function merc(a,b){let x=b*20037508.34/180,y=Math.log(Math.tan((90+a)*Math.PI/360))/(Math.PI/180)*20037508.34/180;return `X: ${x.toFixed(2)} m, Y: ${y.toFixed(2)} m`}
+function plus(a,b){/* Open Location Code pair encoding, 10 digits */const alpha='23456789CFGHJMPQRVWX';let lat=Math.min(90,Math.max(-90,a)),lng=Math.min(180,Math.max(-180,b));if(lat===90)lat-=1e-10;if(lng===180)lng-=1e-10;lat+=90;lng+=180;let out='';let res=20;for(let i=0;i<5;i++){let la=Math.floor(lat/res),lo=Math.floor(lng/res);la=Math.min(19,la);lo=Math.min(19,lo);out+=alpha[la]+alpha[lo];lat-=la*res;lng-=lo*res;res/=20;if(i===1)out+='+'}return out}
+function convert(){
+ let p=mode==='smart'?parse(document.getElementById('smart').value):{lat:+document.getElementById('lat').value,lng:+document.getElementById('lng').value};
+ if(!p||!Number.isFinite(p.lat)||!Number.isFinite(p.lng)){msg('Could not parse that coordinate. Use DD, DDM, DMS, UTM or Geohash.',true);return}
+ let {lat:a,lng:b}=p;if(a < -90||a>90||b < -180||b>180){msg('Latitude must be -90 to 90 and longitude -180 to 180.',true);return}
+ let u=utmF(a,b),vals=[
+ ['Decimal Degrees (DD)','DD',`${a.toFixed(6)}°, ${b.toFixed(6)}°`,'WGS84 geographic coordinates'],
+ ['Degrees Decimal Minutes (DDM)','DDM',ddm(a,b),'Angular / maritime and aviation notation'],
+ ['Degrees Minutes Seconds (DMS)','DMS',dms(a,b),'Traditional cartographic notation'],
+ ['Universal Transverse Mercator (UTM)','UTM',`${u.zone}${u.band} E ${u.E} m N ${u.N} m`,'WGS84 projected grid'],
+ ['Military Grid Reference System (MGRS)','MGRS',mgrs(a,b),'Grid reference; verify with authoritative GIS for operational use'],
+ ['Earth-Centered, Earth-Fixed (ECEF)','ECEF',ecef(a,b),'WGS84 geocentric XYZ at 0 m altitude'],
+ ['Geohash','GEOHASH',geohash(a,b),'Hierarchical spatial index'],
+ ['Plus Code (Open Location Code)','PLUS CODE',plus(a,b),'Open Location Code, 10-digit pair code'],
+ ['Web Mercator (EPSG:3857)','EPSG:3857',merc(a,b),'Spherical Web map projection']
+ ];
+ last=vals;document.getElementById('results').innerHTML=vals.map((v,i)=>`<article class="result"><div class="resulttop"><h3>${v[0]}</h3><span class="tag">${v[1]}</span><button class="small" onclick="copyOne(${i})">COPY</button></div><div class="value">${v[2]}</div><div class="desc">${v[3]}</div></article>`).join('');document.getElementById('status').classList.add('hidden')
+}
+function copyOne(i){copy(last[i][2])}function copyAll(){if(!last.length){msg('Convert a coordinate first.',true);return}copy(last.map(v=>`[${v[0]}]\\n${v[2]}\\n${v[3]}`).join('\\n\\n'))}
+function copy(t){if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>toast('Copied to clipboard')).catch(()=>fallback(t));else fallback(t)}
+function fallback(t){let e=document.createElement('textarea');e.value=t;document.body.appendChild(e);e.select();document.execCommand('copy');e.remove();toast('Copied to clipboard')}
+function liveGPS(){if(!navigator.geolocation){msg('Location is not available in this WebView.',true);return}msg('Requesting GPS location…');navigator.geolocation.getCurrentPosition(pos=>{let a=pos.coords.latitude.toFixed(6),b=pos.coords.longitude.toFixed(6);if(mode==='smart')document.getElementById('smart').value=`${a}, ${b}`;else{document.getElementById('lat').value=a;document.getElementById('lng').value=b}convert();msg(`GPS fix acquired · estimated accuracy ±${Math.round(pos.coords.accuracy)} m`)},e=>msg(`GPS error: ${e.message}. Check Android location permission and device location settings.`,true),{enableHighAccuracy:true,timeout:15000,maximumAge:0})}
+preset('37.774929, -122.419416');
+</script>
+</body></html>
